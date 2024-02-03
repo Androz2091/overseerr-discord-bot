@@ -26,5 +26,13 @@ declare namespace NodeJS {
         ADMINJS_PASSWORD: string|undefined;
 
         SENTRY_API_KEY: string|undefined;
+
+        OVERSEERR_BASE_URL: string;
+        OVERSEERR_API_KEY: string;
+        
+        WEB_SERVER_PORT: number;
+
+        OVERSEERR_EMAIL: string;
+        OVERSEERR_PASSWORD: string;
     }
 }

@@ -2,14 +2,16 @@ import { config } from 'dotenv';
 config();
 
 import './sentry';
+import './server';
 
 import { initialize as initializeDatabase } from './database';
 import { loadContextMenus, loadMessageCommands, loadSlashCommands, synchronizeSlashCommands } from './handlers/commands';
 
-import { syncSheets } from './integrations/sheets';
+import { getQualityMatchings, syncSheets } from './integrations/sheets';
 
 import { Client, IntentsBitField } from 'discord.js';
 import { loadTasks } from './handlers/tasks';
+import { MediaType, OverseerrClient } from './integrations/overseerr';
 export const client = new Client({
     intents: [
         IntentsBitField.Flags.Guilds,
@@ -27,7 +29,144 @@ synchronizeSlashCommands(client, [...slashCommandsData, ...contextMenusData], {
     guildId: process.env.GUILD_ID
 });
 
+export const overseerrClient = new OverseerrClient(process.env.OVERSEERR_BASE_URL, process.env.OVERSEERR_API_KEY, process.env.OVERSEERR_EMAIL, process.env.OVERSEERR_PASSWORD);
+
 client.on('interactionCreate', async (interaction) => {
+
+    if (interaction.isAutocomplete()) {
+
+        if (interaction.commandName === 'demande') {
+
+            const selectedOption = interaction.options.getFocused(true);
+
+            if (selectedOption.name === 'titre') {
+
+                const beginningInput = selectedOption.value;
+                const movies = await overseerrClient.search(beginningInput);
+
+                const options = movies.map((movie) => ({
+                    name: '[' + movie.mediaType + '] ' + movie.title + ' (' + movie.releaseYear + ')',
+                    value: movie.id.toString() + '_' + movie.mediaType
+                }));
+
+                return interaction.respond(options);
+
+            }
+
+            else if (selectedOption.name === 'type-de-media') {
+
+                const beginningInput = selectedOption.value;
+                const selectedMediaData = interaction.options.get('titre')?.value;
+                if (!selectedMediaData) {
+                    return interaction.respond([]);
+                } else {
+                    const [id, mediaType] = selectedMediaData.toString().split('_');
+                    const rootFolders = await overseerrClient.getQualityProfilesAndRootFolders(mediaType as MediaType);
+                    const options = rootFolders.rootFolders.map((folder) => ({
+                        name: folder.path,
+                        value: folder.id.toString()
+                    }));
+                    return interaction.respond(options);
+                }
+
+            } else if (selectedOption.name === 'saisons') {
+
+                const beginningInput = selectedOption.value;
+                const selectedMediaData = interaction.options.get('titre')?.value;
+                if (!selectedMediaData) {
+                    return interaction.respond([]);
+                } else {
+                    const [id, mediaType] = selectedMediaData.toString().split('_');
+                    if (mediaType === 'tv') {
+                        const tvData = await overseerrClient.resolveTvData(parseInt(id));
+                        let options = new Array(tvData.seasons.length).fill(0).map((_, i) => ({
+                            name: 'Saison ' + (i + 1),
+                            value: i.toString()
+                        }));
+                        // if >= 24 seasons, gets only the one with the typed number
+                        if (tvData.seasons.length >= 24) {
+                            options = options.filter((option) => option.name.includes(beginningInput));
+                        }
+                        options.push({
+                            name: 'Toute la série',
+                            value: 'all'
+                        });
+                        return interaction.respond(options);
+                    } else {
+                        return interaction.respond([{
+                            name: 'le film complet',
+                            value: 0
+                        }]);
+                    }
+                }
+
+            }
+
+        }
+
+    }
+
+    if (interaction.isButton()) {
+
+        if (interaction.customId.startsWith('confirm')) {
+            
+            const [_confirm, id, mediaType, rootFolder, _seasonId] = interaction.customId.split('_');
+
+
+            const qualityProfiles = await overseerrClient.getQualityProfilesAndRootFolders(mediaType as MediaType);
+            const rootFolderPath = qualityProfiles.rootFolders.find((folder) => folder.id === parseInt(rootFolder))?.path!;
+
+            const qualityMatchings = await getQualityMatchings();
+            const matching = qualityMatchings.find((match) => match.mediaType === mediaType && match.rootFolder === rootFolderPath);
+            const qualityProfileId = qualityProfiles.profiles.find((profile) => profile.name === matching?.qualityProfile)?.id!;
+
+            if (mediaType === 'tv') {
+
+                const tvData = await overseerrClient.resolveTvData(parseInt(id));
+
+                await overseerrClient.softRequestTv(parseInt(id), rootFolderPath, qualityProfileId, parseInt(_seasonId), tvData.seasons.length);
+    
+                return void interaction.update({
+                    content: `La série **${tvData.title}** a bien été demandée !`,
+                    components: []
+                });
+            } else if (mediaType === 'movie') {
+
+                const movieData = await overseerrClient.resolveMovieData(parseInt(id));
+                await overseerrClient.softRequestMovie(parseInt(id), rootFolderPath, qualityProfileId);
+                return void interaction.update({
+                    content: `Le film **${movieData.title}** a bien été demandé !`,
+                    components: []
+                });
+            }
+        }
+
+        else if (interaction.customId === 'cancel') {
+            return void interaction.update({
+                content: 'La demande a bien été annulée.',
+                components: []
+            });
+        }
+
+        if (interaction.customId.startsWith('approve')) {
+            const [_approve, id] = interaction.customId.split('_');
+
+            if (interaction.user.id !== process.env.MANAGER_DISCORD_USER_ID) {
+                return void interaction.update({
+                    content: 'Vous n\'avez pas la permission d\'approuver cette demande.',
+                    components: []
+                });
+            }
+
+            await overseerrClient.approveRequest(parseInt(id));
+
+            return void interaction.update({
+                content: 'La demande a bien été approuvée.',
+                components: []
+            });
+        }
+
+    }
 
     if (interaction.isCommand()) {
 

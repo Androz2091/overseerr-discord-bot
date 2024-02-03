@@ -5,18 +5,19 @@ import { join } from 'path';
 const scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
 
 const auth = new google.auth.GoogleAuth({
-    keyFilename: join(__dirname, '..', '..', 'google-creds.json'),
+    keyFilename: process.env.GOOGLE_CREDS_FILE_PATH,
     scopes
 });
 
-export interface ParameterData {
-    key: string;
-    value: string;
+export interface QualityMatchingData {
+    mediaType: string;
+    rootFolder: string;
+    qualityProfile: string;
 }
 
-export let parameters: ParameterData[] = [];
+export let qualityMatchings: QualityMatchingData[] = [];
 
-export const getParameters = () => parameters;
+export const getQualityMatchings = () => qualityMatchings;
 
 export const syncSheets = () => {
     return new Promise((resolve) => {
@@ -25,19 +26,18 @@ export const syncSheets = () => {
             auth,
             includeGridData: true
         }).then((res) => {
-            const parameterData = res.data.sheets![0]!.data![0].rowData;
-            const newParameters: ParameterData[] = [];
-            for (let i = 1; i < parameterData!.length; i++) {
-                const row = parameterData![i].values!;
-                const key = row[0].formattedValue!;
-                if (!key) continue;
-                const value = row[1].formattedValue!;
-                newParameters.push({
-                    key,
-                    value
-                });
+            const qualityMatchingData = res.data.sheets![0]!.data![0].rowData;
+            const newQualityMatchings: QualityMatchingData[] = [];
+            for (let i = 1; i < qualityMatchingData!.length; i++) {
+                const row = qualityMatchingData![i].values!;
+                const mediaType = row[0].formattedValue!;
+                if (!mediaType) continue;
+                const rootFolder = row[1].formattedValue!;
+                const qualityProfile = row[2].formattedValue!;
+                newQualityMatchings.push({ mediaType, rootFolder, qualityProfile });
             }
-            const data = { newParameters };
+            qualityMatchings = newQualityMatchings;
+            const data = { newQualityMatchings };
             console.log(data);
             resolve(data);
         });
