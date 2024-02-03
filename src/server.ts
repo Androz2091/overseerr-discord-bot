@@ -60,7 +60,7 @@ fastify.post('/overseerr', async (request, reply) => {
 });
 
 // Run the server!
-fastify.listen({ port: process.env.WEB_SERVER_PORT }, (err, address) => {
+fastify.listen({ port: process.env.WEB_SERVER_PORT, host: process.env.WEB_SERVER_HOST }, (err, address) => {
     if (err) throw err
     console.log(`server listening on ${address}`);
 });

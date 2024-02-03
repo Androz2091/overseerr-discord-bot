@@ -55,12 +55,11 @@ client.on('interactionCreate', async (interaction) => {
 
             else if (selectedOption.name === 'type-de-media') {
 
-                const beginningInput = selectedOption.value;
                 const selectedMediaData = interaction.options.get('titre')?.value;
                 if (!selectedMediaData) {
                     return interaction.respond([]);
                 } else {
-                    const [id, mediaType] = selectedMediaData.toString().split('_');
+                    const [_id, mediaType] = selectedMediaData.toString().split('_');
                     const rootFolders = await overseerrClient.getQualityProfilesAndRootFolders(mediaType as MediaType);
                     const options = rootFolders.rootFolders.map((folder) => ({
                         name: folder.path,
@@ -95,7 +94,7 @@ client.on('interactionCreate', async (interaction) => {
                     } else {
                         return interaction.respond([{
                             name: 'le film complet',
-                            value: 0
+                            value: 'all'
                         }]);
                     }
                 }
@@ -152,9 +151,9 @@ client.on('interactionCreate', async (interaction) => {
             const [_approve, id] = interaction.customId.split('_');
 
             if (interaction.user.id !== process.env.MANAGER_DISCORD_USER_ID) {
-                return void interaction.update({
+                return void interaction.reply({
                     content: 'Vous n\'avez pas la permission d\'approuver cette demande.',
-                    components: []
+                    ephemeral: true
                 });
             }
 

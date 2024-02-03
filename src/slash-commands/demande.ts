@@ -65,7 +65,6 @@ export const run: SlashCommandRunFunction = async (interaction) => {
     ]
 
     if (mediaType === 'tv') {
-
         confirmCancelComponents[0].components[0].setCustomId(`confirm_${id}_${mediaType}_${rootDirectory}_${seasonId}`);
 
         const sonarrData = await overseerrClient.getQualityProfilesAndRootFolders(mediaType);
@@ -73,9 +72,8 @@ export const run: SlashCommandRunFunction = async (interaction) => {
         const tvData = await overseerrClient.resolveTvData(parseInt(id));
         const embed = overseerrClient.buildDiscordEmbed(tvData, rootDirData?.path!, seasonData);
 
-        return interaction.reply({ embeds: [embed], components: confirmCancelComponents });
+        return interaction.reply({ embeds: [embed], components: confirmCancelComponents, ephemeral: true });
     } else if (mediaType === 'movie') {
-
         confirmCancelComponents[0].components[0].setLabel("C'est bien ce film !");
 
         const radarrData = await overseerrClient.getQualityProfilesAndRootFolders(mediaType);
@@ -83,7 +81,7 @@ export const run: SlashCommandRunFunction = async (interaction) => {
         const movieData = await overseerrClient.resolveMovieData(parseInt(id));
         const embed = overseerrClient.buildDiscordEmbed(movieData, rootDirData?.path!);
 
-        return interaction.reply({ embeds: [embed], components: confirmCancelComponents });
+        return interaction.reply({ embeds: [embed], components: confirmCancelComponents, ephemeral: true });
     }
 
 }

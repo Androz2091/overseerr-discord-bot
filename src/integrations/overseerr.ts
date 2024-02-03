@@ -51,6 +51,7 @@ export class OverseerrClient {
     private softEmail: string;
     private softPassword: string;
     private softCookie: string;
+    private previousSearchAbortController: AbortController|null;
     
     constructor (baseUrl: string, apiKey: string, softEmail: string, softPassword: string) {
         this.baseUrl = baseUrl;
@@ -59,6 +60,8 @@ export class OverseerrClient {
         this.softEmail = softEmail;
         this.softPassword = softPassword;
         this.softCookie = '';
+
+        this.previousSearchAbortController = null;
     }
 
     get authenticationHeader () {
@@ -125,12 +128,17 @@ export class OverseerrClient {
     }
 
     public async search(titleName: string): Promise<OverseerrSearchMediaData[]> {
+        this.previousSearchAbortController?.abort();
+        this.previousSearchAbortController = new AbortController();
+        console.log('searching...');
         const response = await fetch(`${this.baseUrl}/api/v1/search?query=${titleName}`, {
-            headers: { ...this.authenticationHeader, ...{ 'Content-Type': 'application/json' } }
+            headers: { ...this.authenticationHeader, ...{ 'Content-Type': 'application/json' } },
+            signal: this.previousSearchAbortController.signal
         });
         const data = await response.json();
+        console.log(data);
         if (data.errors) {
-            return []
+            return [];
         }
         return data?.results
             ?.filter((media: OverseerrSearchMediaData) => (media.releaseDate || media.firstAirDate) && (media.title || media.name))
@@ -144,7 +152,7 @@ export class OverseerrClient {
                     title: title,
                     releaseYear: releaseDate.split('-')[0]
                 }
-            })
+            });
     }
 
     public async resolveMainRRId (serviceName: 'radarr' | 'sonarr') {

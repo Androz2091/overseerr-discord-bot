@@ -30,6 +30,7 @@ declare namespace NodeJS {
         OVERSEERR_BASE_URL: string;
         OVERSEERR_API_KEY: string;
         
+        WEB_SERVER_HOST: string;
         WEB_SERVER_PORT: number;
 
         OVERSEERR_EMAIL: string;
