@@ -83,8 +83,8 @@ client.on('interactionCreate', async (interaction) => {
                             value: i.toString()
                         }));
                         // if >= 24 seasons, gets only the one with the typed number
-                        if (tvData.seasons.length >= 24) {
-                            options = options.filter((option) => option.name.includes(beginningInput));
+                        if (tvData.seasons.length >= 20) {
+                            options = options.filter((option) => option.name.includes(beginningInput)).slice(0, 20);
                         }
                         options.push({
                             name: 'Toute la série',
