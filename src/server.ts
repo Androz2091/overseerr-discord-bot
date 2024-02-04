@@ -44,7 +44,7 @@ fastify.post('/overseerr', async (request, reply) => {
             const embed = overseerrClient.buildDiscordEmbed(movieData as OverseerrMediaData);
             logsChannel.send({ embeds: [embed], components: [approveRow] });
         } else if (pendingData.media.media_type === 'tv') {
-            const tvData = await overseerrClient.resolveTvData(parseInt(pendingData.media.tvdbId));
+            const tvData = await overseerrClient.resolveTvData(parseInt(pendingData.media.tmdbId));
             const embed = overseerrClient.buildDiscordEmbed(tvData as OverseerrMediaData);
             logsChannel.send({ embeds: [embed], components: [approveRow] });
         }
